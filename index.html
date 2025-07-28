@@ -1,0 +1,139 @@
+# تكسي حمودي
+
+html_content = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>تكسي حمودي</title>
+  <style>
+    body { font-family: 'Arial', sans-serif; padding: 20px; background: #f0f0f0; direction: rtl; }
+    input, select, button { display: block; width: 100%; margin-bottom: 15px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+    button { background: #27ae60; color: white; font-weight: bold; cursor: pointer; }
+    button:hover { background: #219150; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>طلب تكسي - تكسي حمودي</h2>
+    <label>اسم الزبون الثلاثي:</label>
+    <input type="text" id="name" required placeholder="مثال: أحمد محمد علي" />
+
+    <label>رقم الزبون:</label>
+    <input type="tel" id="phone" required placeholder="مثال: 07801234567" />
+
+    <label>موقع الزبون (اضغط لتحديد):</label>
+    <button onclick="getLocation()">📍 تحديد موقعي</button>
+    <input type="text" id="location" readonly placeholder="سيتم تعبئة الموقع تلقائيًا" />
+
+    <div id="destinationField">
+      <label>الوجهة:</label>
+      <input type="text" id="destination" placeholder="مثال: شارع الزيتون" />
+    </div>
+
+    <label>نوع التكسي:</label>
+    <select id="taxiType" onchange="handleTaxiTypeChange()" required>
+      <option value="عادي">عادي</option>
+      <option value="حمل">حمل</option>
+      <option value="طلب أغراض">طلب أغراض</option>
+    </select>
+
+    <label>نوع الطلب:</label>
+    <input type="text" id="orderType" required placeholder="مثال: مشوار سريع" />
+
+    <button onclick="sendMessage()">🚕 إرسال الطلب</button>
+  </div>
+
+  <script>
+    let lastSubmitTime = 0;
+    let latitude = "";
+    let longitude = "";
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+          latitude = position.coords.latitude;
+          longitude = position.coords.longitude;
+          document.getElementById("location").value = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        }, function () {
+          alert("فشل في تحديد الموقع. يرجى المحاولة مرة أخرى.");
+        });
+      } else {
+        alert("المتصفح لا يدعم تحديد الموقع.");
+      }
+    }
+
+    function handleTaxiTypeChange() {
+      const taxiType = document.getElementById("taxiType").value;
+      const destinationField = document.getElementById("destinationField");
+      const destinationInput = document.getElementById("destination");
+
+      if (taxiType === "طلب أغراض") {
+        destinationField.style.display = "none";
+        destinationInput.value = "";
+      } else {
+        destinationField.style.display = "block";
+      }
+    }
+
+    function calculatePrice(location, destination) {
+      const areas = {
+        "سوق الرطبة": 2000, "سوق الكماليات": 2000, "الميثاق القديم": 2000, "الميثاق الجديد": 2000,
+        "حي الانتصار": 2500, "الحارة القديمة": 2500, "الحارة الجديدة": 2500, "شارع الزيتون": 2500,
+        "شارع 60": 2500, "شارع الحولي": 2500, "الكرابلة": 3000, "المطار القديم": 3000,
+        "المطار الجديد": 3000, "حي العسكري": 3000, "مستشفى الرطبة العامة": 3000
+      };
+
+      for (const area in areas) {
+        if (location.includes(area) || destination.includes(area)) {
+          return areas[area];
+        }
+      }
+      return 2500;
+    }
+
+    function sendMessage() {
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const location = document.getElementById("location").value.trim();
+      const destination = document.getElementById("destination").value.trim();
+      const taxiType = document.getElementById("taxiType").value;
+      const orderType = document.getElementById("orderType").value.trim();
+
+      if (name.split(" ").length < 3) return alert("يرجى كتابة الاسم الثلاثي.");
+     
+      if (!location) return alert("يرجى تحديد الموقع.");
+      if ((taxiType === "عادي" || taxiType === "حمل") && !destination) return alert("يرجى إدخال الوجهة.");
+
+      const now = Date.now();
+      if (now - lastSubmitTime < 5000) return alert("الرجاء الانتظار قليلاً قبل إعادة الإرسال.");
+      lastSubmitTime = now;
+
+      const price = calculatePrice(location, destination);
+      const msg = `🚖 طلب جديد من موقع تكسي حمودي:
+📛 الاسم: ${name}
+📞 الرقم: ${phone}
+📍 الموقع: ${location}
+${taxiType !== "طلب أغراض" ? "🎯 الوجهة: " + destination + "\\n" : ""}
+🚗 نوع التكسي: ${taxiType}
+📦 نوع الطلب: ${orderType}
+💰 السعر: ${price} دينار`;
+
+      const botToken = "8315380619:AAGnaVyy8OOUGuuXLP6TjrBRJZMPgt8GfIc";
+      const chatId = "7929039090";
+      const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(msg)}`;
+
+      fetch(url).then(response => {
+        if (response.ok) {
+          alert("تم إرسال الطلب بنجاح ✅");
+        } else {
+          alert("فشل في إرسال الطلب ❌");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+"""
